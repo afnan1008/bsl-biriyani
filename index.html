@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বরিশাল মসজিদ ও বিরিয়ানি ট্র্যাকার 🕌</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-bg-pattern"></div>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="mosque-icon">🕌</div>
+                    <div>
+                        <h1>বরিশাল মসজিদ ট্র্যাকার</h1>
+                        <p class="tagline">আজকে কোন মসজিদে বিরিয়ানি? 🍚</p>
+                    </div>
+                </div>
+                <div class="header-stats" id="headerStats">
+                    <div class="stat-pill">
+                        <i class="fas fa-mosque"></i>
+                        <span id="totalMosques">0</span> মসজিদ
+                    </div>
+                    <div class="stat-pill biriyani-pill">
+                        <span>🍛</span>
+                        <span id="totalBiriyani">0</span> বিরিয়ানি আজকে
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+        <div class="container">
+            <div class="tabs">
+                <button class="tab active" data-tab="biriyani-today">
+                    <i class="fas fa-fire"></i>
+                    আজকের বিরিয়ানি
+                </button>
+                <button class="tab" data-tab="all-mosques">
+                    <i class="fas fa-mosque"></i>
+                    সকল মসজিদ
+                </button>
+                <button class="tab" data-tab="add-mosque">
+                    <i class="fas fa-plus-circle"></i>
+                    মসজিদ যোগ করুন
+                </button>
+                <button class="tab" data-tab="add-biriyani">
+                    <i class="fas fa-utensils"></i>
+                    বিরিয়ানি আপডেট
+                </button>
+                <button class="tab" data-tab="survey">
+                    <i class="fas fa-poll"></i>
+                    সার্ভে
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+
+            <!-- TODAY'S BIRIYANI TAB -->
+            <section id="biriyani-today" class="tab-content active">
+                <div class="section-header">
+                    <h2>🍛 আজকের বিরিয়ানি তালিকা</h2>
+                    <p class="date-display" id="todayDate"></p>
+                </div>
+
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchBiriyani" placeholder="মসজিদ খুঁজুন...">
+                    </div>
+                    <div class="filter-chips">
+                        <button class="chip active" data-filter="all">সব</button>
+                        <button class="chip" data-filter="verified">✅ যাচাইকৃত</button>
+                        <button class="chip" data-filter="unverified">⏳ অপেক্ষমান</button>
+                    </div>
+                </div>
+
+                <div id="biriyaniList" class="cards-grid">
+                    <!-- Cards loaded dynamically -->
+                </div>
+
+                <div id="noBiriyani" class="empty-state" style="display:none;">
+                    <div class="empty-icon">😢</div>
+                    <h3>আজকে কোন বিরিয়ানি খবর নেই</h3>
+                    <p>আপনি জানলে বিরিয়ানি আপডেট ট্যাবে গিয়ে জানান!</p>
+                </div>
+            </section>
+
+            <!-- ALL MOSQUES TAB -->
+            <section id="all-mosques" class="tab-content">
+                <div class="section-header">
+                    <h2>🕌 বরিশালের সকল মসজিদ</h2>
+                </div>
+
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchMosque" placeholder="মসজিদ খুঁজুন...">
+                    </div>
+                    <select id="areaFilter" class="area-select">
+                        <option value="all">সকল এলাকা</option>
+                    </select>
+                </div>
+
+                <div id="mosqueList" class="cards-grid">
+                    <!-- Cards loaded dynamically -->
+                </div>
+            </section>
+
+            <!-- ADD MOSQUE TAB -->
+            <section id="add-mosque" class="tab-content">
+                <div class="section-header">
+                    <h2>➕ নতুন মসজিদ যোগ করুন</h2>
+                </div>
+
+                <div class="form-card">
+                    <form id="mosqueForm">
+                        <div class="form-group">
+                            <label><i class="fas fa-mosque"></i> মসজিদের নাম *</label>
+                            <input type="text" id="mosqueName" placeholder="যেমন: বায়তুল আমান জামে মসজিদ" required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label><i class="fas fa-map-marker-alt"></i> এলাকা *</label>
+                                <select id="mosqueArea" required>
+                                    <option value="">এলাকা নির্বাচন করুন</option>
+                                    <option value="সদর">সদর</option>
+                                    <option value="নথুল্লাবাদ">নথুল্লাবাদ</option>
+                                    <option value="বাকারগঞ্জ">বাকারগঞ্জ</option>
+                                    <option value="গৌরনদী">গৌরনদী</option>
+                                    <option value="আগৈলঝাড়া">আগৈলঝাড়া</option>
+                                    <option value="মুলাদী">মুলাদী</option>
+                                    <option value="বাবুগঞ্জ">বাবুগঞ্জ</option>
+                                    <option value="বানারীপাড়া">বানারীপাড়া</option>
+                                    <option value="মেহেন্দিগঞ্জ">মেহেন্দিগঞ্জ</option>
+                                    <option value="হেলাচিয়া">হেলাচিয়া</option>
+                                    <option value="রুপাতলী">রুপাতলী</option>
+                                    <option value="কাউনিয়া">কাউনিয়া</option>
+                                    <option value="চরবাড়িয়া">চরবাড়িয়া</option>
+                                    <option value="অন্যান্য">অন্যান্য</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-road"></i> বিস্তারিত ঠিকানা</label>
+                                <input type="text" id="mosqueAddress" placeholder="রোড/গলি নম্বর">
+                            </div>
+                        </div>
+
+                        <div class="form-divider">
+                            <span>আপনার তথ্য</span>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label><i class="fas fa-user"></i> আপনার নাম *</label>
+                                <input type="text" id="mosqueAdderName" placeholder="আপনার নাম" required>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-phone"></i> ফোন নম্বর *</label>
+                                <input type="tel" id="mosqueAdderPhone" placeholder="01XXXXXXXXX" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-plus"></i> মসজিদ যোগ করুন
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ADD BIRIYANI TAB -->
+            <section id="add-biriyani" class="tab-content">
+                <div class="section-header">
+                    <h2>🍛 বিরিয়ানি আপডেট দিন</h2>
+                    <p>কোন মসজিদে আজকে বিরিয়ানি দিচ্ছে জানান!</p>
+                </div>
+
+                <div class="form-card">
+                    <form id="biriyaniForm">
+                        <div class="form-group">
+                            <label><i class="fas fa-mosque"></i> মসজিদ নির্বাচন করুন *</label>
+                            <select id="biriyaniMosque" required>
+                                <option value="">মসজিদ সিলেক্ট করুন</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label><i class="fas fa-clock"></i> কোন ওয়াক্তে?</label>
+                                <select id="biriyaniWaqt">
+                                    <option value="যোহর">যোহর</option>
+                                    <option value="জুমা" selected>জুমা</option>
+                                    <option value="আসর">আসর</option>
+                                    <option value="মাগরিব">মাগরিব</option>
+                                    <option value="ইশা">ইশা</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-calendar"></i> তারিখ</label>
+                                <input type="date" id="biriyaniDate">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-info-circle"></i> অতিরিক্ত তথ্য</label>
+                            <textarea id="biriyaniNote" placeholder="কী উপলক্ষে? কতজনের জন্য? ইত্যাদি..." rows="3"></textarea>
+                        </div>
+
+                        <div class="form-divider">
+                            <span>আপনার তথ্য</span>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label><i class="fas fa-user"></i> আপনার নাম *</label>
+                                <input type="text" id="biriyaniAdderName" placeholder="আপনার নাম" required>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-phone"></i> ফোন নম্বর *</label>
+                                <input type="tel" id="biriyaniAdderPhone" placeholder="01XXXXXXXXX" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-paper-plane"></i> বিরিয়ানি আপডেট দিন
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- SURVEY TAB -->
+            <section id="survey" class="tab-content">
+                <div class="section-header">
+                    <h2>📊 বিরিয়ানি সার্ভে</h2>
+                    <p>বিরিয়ানি আসলেই দিয়েছিল কিনা জানান!</p>
+                </div>
+
+                <div id="surveyList" class="cards-grid">
+                    <!-- Survey cards loaded dynamically -->
+                </div>
+
+                <div id="noSurvey" class="empty-state" style="display:none;">
+                    <div class="empty-icon">📋</div>
+                    <h3>কোন সার্ভে নেই</h3>
+                    <p>বিরিয়ানি আপডেট থাকলে এখানে সার্ভে আসবে</p>
+                </div>
+
+                <!-- Survey Results -->
+                <div class="section-header" style="margin-top: 2rem;">
+                    <h2>📈 সার্ভে ফলাফল</h2>
+                </div>
+                <div id="surveyResults" class="cards-grid">
+                    <!-- Results loaded dynamically -->
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="toast-content">
+            <i class="fas fa-check-circle"></i>
+            <span id="toastMessage"></span>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>লোড হচ্ছে...</p>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>❤️ বরিশালের জন্য তৈরি | বিরিয়ানি ট্র্যাকার 2026</p>
+        </div>
+    </footer>
+
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

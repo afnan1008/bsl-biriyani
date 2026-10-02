@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বরিশাল সদর ৫০ মসজিদ সিড</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #0f1f17;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: #1a2e23;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        h1 { color: #22a565; margin-bottom: 0.5rem; font-size: 1.8rem; }
+        p.subtitle { color: #8fa89a; margin-bottom: 2rem; }
+        .progress-container {
+            background: #0f1f17;
+            border-radius: 50px;
+            height: 30px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #1a7a4c, #22a565, #34d399);
+            border-radius: 50px;
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: white;
+            min-width: 40px;
+        }
+        .status {
+            font-size: 1.1rem;
+            color: #fbbf24;
+            margin: 1rem 0;
+            min-height: 30px;
+        }
+        .log {
+            background: #0f1f17;
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.8;
+        }
+        .log-item { color: #8fa89a; }
+        .log-item.success { color: #34d399; }
+        .log-item.error { color: #f87171; }
+        .log-item.done { color: #fbbf24; font-weight: 700; font-size: 1rem; }
+        .btn {
+            margin-top: 1.5rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #1a7a4c, #22a565);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(34,165,101,0.4); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕌 বরিশাল সদর মসজিদ সিডার</h1>
+        <p class="subtitle">বরিশাল সদরের ৫০টি জনপ্রিয় মসজিদ Firebase-এ যোগ করা হবে</p>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+        
+        <div class="status" id="status">⏳ শুরু করার জন্য বাটনে ক্লিক করুন</div>
+        
+        <button class="btn" id="startBtn" onclick="startSeeding()">
+            🚀 ৫০টি মসজিদ যোগ করুন
+        </button>
+        
+        <button class="btn btn-danger" onclick="deleteAll()">
+            🗑️ সব মসজিদ ডিলিট করুন (সতর্কতা!)
+        </button>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        // ===== Firebase Config =====
+        const firebaseConfig = {
+            apiKey: "AIzaSyBrvetPlCaYE_9cd1dU0he7dN0ugjsEdPg",
+            authDomain: "barishal-biriyani.firebaseapp.com",
+            projectId: "barishal-biriyani",
+            storageBucket: "barishal-biriyani.firebasestorage.app",
+            messagingSenderId: "487454043608",
+            appId: "1:487454043608:web:f0ae6225668ff2bb98d6ad",
+            measurementId: "G-TF92W50L30"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ===== 50 Popular Mosques of BARISHAL SADAR =====
+        const mosques = [
+            // ===== সদর রোড / কেন্দ্রীয় এলাকা =====
+            { name: "বরিশাল কেন্দ্রীয় জামে মসজিদ", area: "সদর রোড", address: "সদর রোড, বরিশাল সিটি কর্পোরেশন" },
+            { name: "বায়তুল মোকাররম জামে মসজিদ", area: "সদর রোড", address: "সদর রোড, বরিশাল" },
+            { name: "চকবাজার শাহী জামে মসজিদ", area: "চকবাজার", address: "চকবাজার, বরিশাল সদর" },
+            { name: "ফজলুল হক এভিনিউ জামে মসজিদ", area: "ফজলুল হক এভিনিউ", address: "ফজলুল হক এভিনিউ, বরিশাল" },
+            { name: "অশ্বিনী কুমার হল জামে মসজিদ", area: "সদর রোড", address: "অশ্বিনী কুমার হল সংলগ্ন, সদর রোড" },
+            { name: "বগুড়া রোড জামে মসজিদ", area: "বগুড়া রোড", address: "বগুড়া রোড, বরিশাল সদর" },
+            { name: "কালীবাড়ি রোড জামে মসজিদ", area: "কালীবাড়ি রোড", address: "কালীবাড়ি রোড, বরিশাল" },
+            { name: "হাটখোলা জামে মসজিদ", area: "হাটখোলা", address: "হাটখোলা রোড, বরিশাল সদর" },
+            { name: "গীর্জা মহল্লা জামে মসজিদ", area: "গীর্জা মহল্লা", address: "গীর্জা মহল্লা, বরিশাল সদর" },
+            { name: "প্যারারা রোড জামে মসজিদ", area: "প্যারারা রোড", address: "প্যারারা রোড, বরিশাল" },
+
+            // ===== নথুল্লাবাদ এলাকা =====
+            { name: "নথুল্লাবাদ কেন্দ্রীয় জামে মসজিদ", area: "নথুল্লাবাদ", address: "নথুল্লাবাদ, বরিশাল সদর" },
+            { name: "বায়তুল আমান জামে মসজিদ", area: "নথুল্লাবাদ", address: "নথুল্লাবাদ বাস টার্মিনাল সংলগ্ন" },
+            { name: "নথুল্লাবাদ পশ্চিম পাড়া জামে মসজিদ", area: "নথুল্লাবাদ", address: "পশ্চিম নথুল্লাবাদ, বরিশাল" },
+            { name: "আল-ফারুক জামে মসজিদ", area: "নথুল্লাবাদ", address: "নথুল্লাবাদ, বরিশাল সদর" },
+
+            // ===== রূপাতলী এলাকা =====
+            { name: "রূপাতলী কেন্দ্রীয় জামে মসজিদ", area: "রূপাতলী", address: "রূপাতলী হাউজিং এস্টেট, বরিশাল" },
+            { name: "রূপাতলী বাস স্ট্যান্ড জামে মসজিদ", area: "রূপাতলী", address: "রূপাতলী বাস স্ট্যান্ড সংলগ্ন" },
+            { name: "আল-আমিন জামে মসজিদ", area: "রূপাতলী", address: "রূপাতলী, বরিশাল সদর" },
+            { name: "রূপাতলী হাউজিং জামে মসজিদ", area: "রূপাতলী", address: "রূপাতলী হাউজিং, বরিশাল" },
+
+            // ===== কাউনিয়া এলাকা =====
+            { name: "কাউনিয়া কেন্দ্রীয় জামে মসজিদ", area: "কাউনিয়া", address: "কাউনিয়া, বরিশাল সদর" },
+            { name: "কাউনিয়া পুরান বাজার জামে মসজিদ", area: "কাউনিয়া", address: "কাউনিয়া পুরান বাজার, বরিশাল" },
+            { name: "কাউনিয়া নতুন বাজার জামে মসজিদ", area: "কাউনিয়া", address: "কাউনিয়া নতুন বাজার" },
+            { name: "কাউনিয়া প্রধান সড়ক জামে মসজিদ", area: "কাউনিয়া", address: "কাউনিয়া প্রধান সড়ক" },
+
+            // ===== আমানতগঞ্জ এলাকা =====
+            { name: "আমানতগঞ্জ কেন্দ্রীয় জামে মসজিদ", area: "আমানতগঞ্জ", address: "আমানতগঞ্জ, বরিশাল সদর" },
+            { name: "আমানতগঞ্জ বাজার জামে মসজিদ", area: "আমানতগঞ্জ", address: "আমানতগঞ্জ বাজার সংলগ্ন" },
+            { name: "আমানতগঞ্জ পশ্চিম পাড়া জামে মসজিদ", area: "আমানতগঞ্জ", address: "পশ্চিম আমানতগঞ্জ" },
+
+            // ===== পলাশপুর / বেলতলা =====
+            { name: "পলাশপুর জামে মসজিদ", area: "পলাশপুর", address: "পলাশপুর, বরিশাল সদর" },
+            { name: "বেলতলা কেন্দ্রীয় জামে মসজিদ", area: "বেলতলা", address: "বেলতলা, বরিশাল সদর" },
+            { name: "বেলতলা বাজার জামে মসজিদ", area: "বেলতলা", address: "বেলতলা বাজার সংলগ্ন" },
+
+            // ===== নবগ্রাম রোড =====
+            { name: "নবগ্রাম রোড জামে মসজিদ", area: "নবগ্রাম", address: "নবগ্রাম রোড, বরিশাল সদর" },
+            { name: "নবগ্রাম কাঠপট্টি জামে মসজিদ", area: "নবগ্রাম", address: "নবগ্রাম কাঠপট্টি, বরিশাল" },
+
+            // ===== চরবাড়িয়া =====
+            { name: "চরবাড়িয়া কেন্দ্রীয় জামে মসজিদ", area: "চরবাড়িয়া", address: "চরবাড়িয়া, বরিশাল সদর" },
+            { name: "চরবাড়িয়া পূর্ব পাড়া জামে মসজিদ", area: "চরবাড়িয়া", address: "পূর্ব চরবাড়িয়া, বরিশাল" },
+
+            // ===== পোর্ট রোড =====
+            { name: "পোর্ট রোড জামে মসজিদ", area: "পোর্ট রোড", address: "পোর্ট রোড, বরিশাল সদর" },
+            { name: "লঞ্চঘাট জামে মসজিদ", area: "পোর্ট রোড", address: "লঞ্চঘাট সংলগ্ন, বরিশাল" },
+
+            // ===== সাগরদী / রসুলপুর =====
+            { name: "সাগরদী জামে মসজিদ", area: "সাগরদী", address: "সাগরদী, বরিশাল সদর" },
+            { name: "রসুলপুর জামে মসজিদ", area: "রসুলপুর", address: "রসুলপুর, বরিশাল সদর" },
+            { name: "রসুলপুর কলোনী জামে মসজিদ", area: "রসুলপুর", address: "রসুলপুর কলোনী, বরিশাল" },
+
+            // ===== কাশিপুর / বিএম কলেজ =====
+            { name: "কাশিপুর জামে মসজিদ", area: "কাশিপুর", address: "কাশিপুর, বরিশাল সদর" },
+            { name: "বিএম কলেজ জামে মসজিদ", area: "বিএম কলেজ", address: "বিএম কলেজ ক্যাম্পাস, বরিশাল" },
+            { name: "ববি (বরিশাল বিশ্ববিদ্যালয়) জামে মসজিদ", area: "কর্ণকাঠী", address: "বরিশাল বিশ্ববিদ্যালয়, কর্ণকাঠী" },
+
+            // ===== ঈদগাহ / গোরস্তান =====
+            { name: "বরিশাল ঈদগাহ ময়দান জামে মসজিদ", area: "ঈদগাহ", address: "ঈদগাহ ময়দান, বরিশাল" },
+            { name: "মুসলিম গোরস্তান জামে মসজিদ", area: "গোরস্তান", address: "মুসলিম গোরস্তান রোড, বরিশাল" },
+
+            // ===== শের-ই-বাংলা / অন্যান্য =====
+            { name: "শের-ই-বাংলা রোড জামে মসজিদ", area: "শের-ই-বাংলা রোড", address: "শের-ই-বাংলা রোড, বরিশাল" },
+            { name: "আদালত পাড়া জামে মসজিদ", area: "আদালত পাড়া", address: "আদালত পাড়া, বরিশাল সদর" },
+            { name: "কীর্তনখোলা তীর জামে মসজিদ", area: "সদর", address: "কীর্তনখোলা নদীর তীর, বরিশাল" },
+            { name: "ত্রিশ গোডাউন জামে মসজিদ", area: "ত্রিশ গোডাউন", address: "ত্রিশ গোডাউন, বরিশাল সদর" },
+            { name: "নতুন বাজার জামে মসজিদ", area: "নতুন বাজার", address: "নতুন বাজার, বরিশাল সদর" },
+            { name: "পুরান বাজার জামে মসজিদ", area: "পুরান বাজার", address: "পুরান বাজার, বরিশাল সদর" },
+            { name: "ভাটিখানা জামে মসজিদ", area: "ভাটিখানা", address: "ভাটিখানা, বরিশাল সদর" },
+            { name: "আলেকান্দা জামে মসজিদ", area: "আলেকান্দা", address: "আলেকান্দা, বরিশাল সদর" },
+            { name: "বটতলা জামে মসজিদ", area: "বটতলা", address: "বটতলা, বরিশাল সদর" },
+        ];
+
+        const logEl = document.getElementById('log');
+        const progressEl = document.getElementById('progressBar');
+        const statusEl = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+
+        function addLog(text, type = '') {
+            const div = document.createElement('div');
+            div.className = `log-item ${type}`;
+            div.textContent = text;
+            logEl.prepend(div);
+        }
+
+        async function startSeeding() {
+            startBtn.disabled = true;
+            startBtn.textContent = '⏳ চলছে...';
+            let success = 0;
+            let skipped = 0;
+            let failed = 0;
+
+            statusEl.textContent = '🔍 ডাটাবেস চেক করা হচ্ছে...';
+            addLog('ডাটাবেস চেক করা হচ্ছে...', '');
+
+            let existingNames = new Set();
+            try {
+                const snap = await db.collection('mosques').get();
+                snap.forEach(doc => existingNames.add(doc.data().name));
+                addLog(`ডাটাবেসে ইতোমধ্যে ${existingNames.size}টি মসজিদ আছে`, '');
+            } catch (e) {
+                addLog('ডাটাবেস চেক করতে সমস্যা: ' + e.message, 'error');
+            }
+
+            for (let i = 0; i < mosques.length; i++) {
+                const m = mosques[i];
+                const pct = Math.round(((i + 1) / mosques.length) * 100);
+                progressEl.style.width = pct + '%';
+                progressEl.textContent = pct + '%';
+                statusEl.textContent = `📍 ${i + 1}/${mosques.length}: ${m.name}`;
+
+                if (existingNames.has(m.name)) {
+                    addLog(`⏭️ ${m.name} — ইতোমধ্যে আছে`, '');
+                    skipped++;
+                    continue;
+                }
+
+                try {
+                    await db.collection('mosques').add({
+                        name: m.name,
+                        area: m.area,
+                        address: m.address,
+                        addedBy: "সিস্টেম (অটো সিড)",
+                        addedByPhone: "01700000000",
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    addLog(`✅ ${m.name} (${m.area})`, 'success');
+                    success++;
+                } catch (err) {
+                    addLog(`❌ ${m.name} — ${err.message}`, 'error');
+                    failed++;
+                }
+
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            progressEl.style.width = '100%';
+            progressEl.textContent = '100%';
+            statusEl.textContent = '🎉 সম্পন্ন!';
+            addLog(`🎉 সম্পন্ন! ✅ ${success} যোগ হয়েছে | ⏭️ ${skipped} স্কিপ | ❌ ${failed} ব্যর্থ`, 'done');
+            
+            startBtn.textContent = '✅ সম্পন্ন হয়েছে!';
+            startBtn.style.background = 'linear-gradient(135deg, #f59e0b, #f97316)';
+        }
+
+        async function deleteAll() {
+            if (!confirm('⚠️ সতর্কতা!\n\nডাটাবেসের সব মসজিদ এবং বিরিয়ানি পোস্ট ডিলিট হয়ে যাবে। আপনি কি নিশ্চিত?')) return;
+            if (!confirm('🚨 আবার নিশ্চিত হচ্ছেন? এটি আর ফিরিয়ে আনা যাবে না!')) return;
+            
+            addLog('🗑️ সব মসজিদ ডিলিট করা হচ্ছে...', 'error');
+            statusEl.textContent = '🗑️ ডিলিট চলছে...';
+            
+            try {
+                const [mosquesSnap, postsSnap] = await Promise.all([
+                    db.collection('mosques').get(),
+                    db.collection('biriyaniPosts').get()
+                ]);
+                
+                const batch = db.batch();
+                mosquesSnap.forEach(doc => batch.delete(doc.ref));
+                postsSnap.forEach(doc => batch.delete(doc.ref));
+                
+                await batch.commit();
+                
+                addLog(`✅ ${mosquesSnap.size}টি মসজিদ এবং ${postsSnap.size}টি পোস্ট ডিলিট হয়েছে`, 'done');
+                statusEl.textContent = '✅ সব কিছু ডিলিট হয়েছে';
+            } catch (e) {
+                addLog('❌ ডিলিট ব্যর্থ: ' + e.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
